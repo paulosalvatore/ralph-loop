@@ -1,0 +1,9 @@
+{
+  "name": "ralph-loop",
+  "version": "2.0.0",
+  "description": "Ralph-loop plugin for Claude Code with per-session state isolation. Fixes concurrent session interference and worktree leaking from the official plugin.",
+  "author": {
+    "name": "Paulo Salvatore",
+    "url": "https://github.com/paulosalvatore"
+  }
+}
