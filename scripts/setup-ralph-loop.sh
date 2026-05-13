@@ -145,12 +145,30 @@ if [[ -z "$PROMPT" ]]; then
   exit 1
 fi
 
-# Get session ID - critical for per-session isolation
+# Get session ID - critical for per-session isolation.
+# CLAUDE_CODE_SESSION_ID is supposed to be set by Claude Code automatically,
+# but is unreliable in many installs and not propagated into sub-agent shells
+# (see https://github.com/anthropics/claude-code/issues/39530).
+#
+# Fallback: derive the session ID from the active transcript file. Claude Code
+# writes the current session's transcript continuously to:
+#   ~/.claude/projects/<encoded-cwd>/<session-id>.jsonl
+# The most-recently-modified .jsonl across all projects is the active session.
+# The stop-hook receives the same ID via its stdin JSON, so they match.
 SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
 if [[ -z "$SESSION_ID" ]]; then
-  echo "Error: CLAUDE_CODE_SESSION_ID is not set." >&2
-  echo "   This environment variable is required for session isolation." >&2
-  echo "   It should be set automatically by Claude Code." >&2
+  CLAUDE_PROJECTS_DIR="${HOME}/.claude/projects"
+  if [[ -d "$CLAUDE_PROJECTS_DIR" ]]; then
+    LATEST_JSONL=$(ls -t "${CLAUDE_PROJECTS_DIR}"/*/*.jsonl 2>/dev/null | head -1)
+    if [[ -n "$LATEST_JSONL" ]]; then
+      SESSION_ID=$(basename "$LATEST_JSONL" .jsonl)
+    fi
+  fi
+fi
+if [[ -z "$SESSION_ID" ]]; then
+  echo "Error: CLAUDE_CODE_SESSION_ID is not set and no active transcript found." >&2
+  echo "   Session isolation requires either the env var or a transcript under ~/.claude/projects." >&2
+  echo "   See https://github.com/anthropics/claude-code/issues/39530" >&2
   exit 1
 fi
 
